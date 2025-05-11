@@ -38,6 +38,7 @@ bool JSSPInstance::wczytajPlik(const std::string& sciezka) {
             op.processing_time = czas;
             op.start_time = 0;
             op.end_time = 0;
+            op.priority = 0;
 
             operacje.push_back(op);
             ++operationID;
