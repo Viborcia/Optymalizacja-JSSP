@@ -1,7 +1,6 @@
 #include "JSSPInstance.h"
 #include "SimpleLoader.h"
 #include "RandomSolver.h"
-#include "GreedySolver.h"
 
 #include <iostream>
 using namespace std;
@@ -10,7 +9,7 @@ int main()
 {
 
     SimpleLoader loader;
-    loader.load("LA/toy.data");
+    loader.load("ta/ta01.txt");
     loader.wypisz();
 
    /* JSSPInstance loader;
@@ -22,13 +21,6 @@ int main()
     solver.solve(loader.operacje, loader.liczbaJobow, loader.liczbaMaszyn);
     solver.printSchedule();
     solver.zapiszDoCSV("harmonogram_random.csv");
-
-
-    GreedySolver greedy;
-    greedy.solve(loader.operacje, loader.liczbaJobow, loader.liczbaMaszyn);
-    greedy.printSchedule();
-    greedy.zapiszDoCSV("harmonogram_greedy.csv");
-
 
     return 0;
 }

@@ -24,6 +24,7 @@ bool SimpleLoader::load(const std::string& filename) {
             op.processing_time = czas;
             op.start_time = 0;
             op.end_time = 0;
+            op.priority = 0;
 
             operacje.push_back(op);
         }
