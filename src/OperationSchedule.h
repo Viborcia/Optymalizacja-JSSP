@@ -9,6 +9,7 @@ struct OperationSchedule {
     int processing_time; // Czas trwania operacji
     int start_time;      // Czas rozpoczęcia operacji
     int end_time;        // Czas zakończenia operacji
+    int priority;
 };
 
 #endif // OPERATION_SCHEDULE_H
