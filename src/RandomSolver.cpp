@@ -65,70 +65,69 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
 
         // === KROK 3: Tworzymy harmonogram, trzymając ograniczenia technologiczne ===
 
-        std::vector<OperationSchedule> harmonogram; // wynikowa lista operacji w kolejności wykonywania
+        std::vector<OperationSchedule> harmonogram;
 
-        std::map<int, int> dostepMaszyny; // kiedy dana maszyna jest dostępna (np. maszyna 1 wolna od czasu 10)
-        std::map<int, int> dostepJoba;    // kiedy dany job może wykonywać kolejną operację
-        std::map<std::pair<int, int>, bool> wykonane; // które operacje już zostały wykonane
+        std::vector<int> maszyna_wolna_od(liczbaMaszyn, 0);
+        std::vector<int> job_gotowy_od(liczbaJobow, 0);
+        std::vector<bool> czy_zrobione(liczbaOperacji, false);
 
-        // Pętla działa, aż wszystkie operacje zostaną zaplanowane
+        // Dopóki nie zaplanujemy wszystkich operacji
         while (harmonogram.size() < kandydaci.size())
         {
-            bool dodano = false; // czy w tej iteracji udało się dodać operację?
+            bool dodano = false;
 
-            // Iterujemy po wszystkich operacjach w kolejności priorytetu
             for (int i = 0; i < kandydaci.size(); ++i)
             {
                 OperationSchedule& op = kandydaci[i];
-                std::pair<int, int> klucz = std::make_pair(op.job_id, op.operation_id);
 
-                // Jeśli ta operacja już została zaplanowana, to pomijamy
-                if (wykonane[klucz]) continue;
+                if (czy_zrobione[i]) continue; // już zaplanowana
 
-                // Sprawdzamy, czy poprzednia operacja z tego joba została wykonana
                 bool poprzedniaWykonana = false;
+
                 if (op.operation_id == 0)
                 {
-                    poprzedniaWykonana = true; // jeśli to pierwsza operacja w jobie – można ją wykonać
+                    poprzedniaWykonana = true;
                 }
                 else
                 {
-                    std::pair<int, int> poprzednia = std::make_pair(op.job_id, op.operation_id - 1);
-                    if (wykonane[poprzednia]) poprzedniaWykonana = true;
-                }
-
-                // Jeśli możemy ją wykonać – harmonogramujemy
-                if (poprzedniaWykonana)
+                // szukamy indeksu poprzedniej operacji w kandydaci
+                for (int j = 0; j < kandydaci.size(); ++j)
                 {
-                    int czasMaszyny = dostepMaszyny[op.machine_id]; // od kiedy maszyna wolna
-                    int czasJoba = dostepJoba[op.job_id];           // od kiedy job gotowy
-
-                    // start_time to max(z obu), żeby nie kolidować
-                    int czasStart = (czasMaszyny > czasJoba) ? czasMaszyny : czasJoba;
-
-                    op.start_time = czasStart;
-                    op.end_time = czasStart + op.processing_time;
-
-                    // Aktualizujemy dostępność maszyny i joba
-                    dostepMaszyny[op.machine_id] = op.end_time;
-                    dostepJoba[op.job_id] = op.end_time;
-
-                    // Zaznaczamy, że ta operacja została wykonana
-                    wykonane[klucz] = true;
-
-                    // Dodajemy operację do harmonogramu
-                    harmonogram.push_back(op);
-                    dodano = true;
+                    if (kandydaci[j].job_id == op.job_id &&
+                    kandydaci[j].operation_id == op.operation_id - 1 &&
+                    czy_zrobione[j])
+                    {
+                        poprzedniaWykonana = true;
+                        break;
+                    }
                 }
             }
 
-            // Jeśli nie udało się zaplanować nic – błąd
-            if (!dodano)
+            if (poprzedniaWykonana)
             {
-                std::cerr << "Błąd: Nie udało się zaplanować żadnej operacji.\n";
-                break;
+                int czasMaszyny = maszyna_wolna_od[op.machine_id];
+                int czasJoba = job_gotowy_od[op.job_id];
+                int czasStart = (czasMaszyny > czasJoba) ? czasMaszyny : czasJoba;
+
+                op.start_time = czasStart;
+                op.end_time = czasStart + op.processing_time;
+
+                maszyna_wolna_od[op.machine_id] = op.end_time;
+                job_gotowy_od[op.job_id] = op.end_time;
+
+                czy_zrobione[i] = true;
+                harmonogram.push_back(op);
+                dodano = true;
             }
         }
+
+    if (!dodano)
+    {
+        std::cerr << "Błąd: Nie udało się zaplanować żadnej operacji.\n";
+        break;
+    }
+    }
+
 
         // === KROK 4: Liczymy makespan – koniec najpóźniejszej operacji ===
         int wynik = 0;
