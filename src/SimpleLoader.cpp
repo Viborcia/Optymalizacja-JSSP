@@ -13,7 +13,8 @@ bool SimpleLoader::load(const std::string& filename) {
 
     int jobID = 0;
     for (int i = 0; i < liczbaJobow; ++i) {
-        for (int opID = 0; opID < liczbaMaszyn; ++opID) {
+        for (int opID = 0; opID < liczbaMaszyn; ++opID) 
+        {
             int maszyna, czas;
             file >> maszyna >> czas;
 
