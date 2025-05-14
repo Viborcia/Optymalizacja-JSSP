@@ -34,7 +34,7 @@ int main()
 // Uruchamiamy algorytm
     tabuSolver.solve(loader.operacje, loader.liczbaJobow, loader.liczbaMaszyn);
     tabuSolver.printSchedule();
-    tabuSolver.zapiszDoCSV("wynik_tabu.csv");
+    tabuSolver.zapiszDoCSV("harmonogram_tabu.csv");
 
     EvolutionarySolver solverAE(100, 500, 0.8, 0.2); // populacja, pokolenia, prawd. krzyÅ¼., mutacji
     solverAE.solve(loader.operacje, loader.liczbaJobow, loader.liczbaMaszyn);
