@@ -9,22 +9,37 @@
 class TabuSearchSolver
 {
 public:
-    TabuSearchSolver(int liczbaIteracji = 1000, int dlugoscTabu = 50);
+    TabuSearchSolver(int liczbaIteracji, int dlugoscTabu);
 
     void solve(const std::vector<OperationSchedule>& operacje, int liczbaJobow, int liczbaMaszyn);
     void printSchedule() const;
-    int getMakespan() const;
+
     void zapiszDoCSV(const std::string& nazwaPliku) const;
+
+   int obliczMakespanOgolny(std::vector<OperationSchedule>& kandydaci, const std::vector<int>* priorytety, bool czySortowac, int liczbaJobow, int liczbaMaszyn) const;
+
+    void zapiszStatystykiDoCSV(const std::string& nazwaPliku, int run) const;
+
+    int getMakespan() const { return makespan; }
+const std::vector<OperationSchedule>& getSchedule() const { return schedule; }
+
+
+
 
 private:
     std::vector<OperationSchedule> schedule; // najlepszy znaleziony harmonogram
     int makespan;                            // jego czas trwania
     int liczbaIteracji;
     int dlugoscTabu;
+    std::vector<int> kosztyIteracji;
 
-    // pomocnicze:
-    std::vector<int> generujLosowyGenotyp(int liczbaJobow, int liczbaMaszyn);
-    int obliczMakespan(std::vector<OperationSchedule>& harmonogram) const;
+    std::vector<OperationSchedule> zbudujHarmonogramZPriorytetami(
+        const std::vector<int>& priorytety,
+        const std::vector<OperationSchedule>& operacje,
+        int liczbaJobow,
+        int liczbaMaszyn
+    );
+
 };
 
 #endif

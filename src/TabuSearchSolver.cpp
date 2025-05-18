@@ -2,9 +2,29 @@
 #include <iostream>
 #include <fstream>
 #include <random>
+#include <numeric>
 #include <algorithm>
 
-// Konstruktor – zapamiętujemy liczbę iteracji i długość listy tabu
+
+// Funkcja sprawdzająca, czy zamiana dwóch operacji w genotypie jest legalna
+bool czySwapLegalny(const std::vector<int>& genotyp, const std::vector<OperationSchedule>& operacje, int i, int j)
+{
+    int idx1 = genotyp[i];
+    int idx2 = genotyp[j];
+
+    const OperationSchedule& op1 = operacje[idx1];
+    const OperationSchedule& op2 = operacje[idx2];
+
+    // Jeśli operacje są z różnych jobów – swap jest zawsze dozwolony
+    if (op1.job_id != op2.job_id)
+        return true;
+
+    // Jeśli swap zmienia kolejność operacji w tym samym jobie – jest nielegalny
+    return !( (op1.operation_id < op2.operation_id && i > j) ||
+              (op2.operation_id < op1.operation_id && j > i) );
+}
+
+// Konstruktor klasy – zapisuje parametry algorytmu
 TabuSearchSolver::TabuSearchSolver(int liczbaIteracji, int dlugoscTabu)
 {
     this->liczbaIteracji = liczbaIteracji;
@@ -12,237 +32,225 @@ TabuSearchSolver::TabuSearchSolver(int liczbaIteracji, int dlugoscTabu)
     this->makespan = 0;
 }
 
-// Główna funkcja rozwiązująca JSSP metodą tabu search
+// Funkcja pomocnicza: buduje harmonogram na podstawie priorytetów
+std::vector<OperationSchedule> TabuSearchSolver::zbudujHarmonogramZPriorytetami(
+    const std::vector<int>& priorytety,
+    const std::vector<OperationSchedule>& operacje,
+    int liczbaJobow,
+    int liczbaMaszyn)
+{
+    std::vector<OperationSchedule> kopia = operacje;
+
+    // Obliczamy harmonogram dla zadanych priorytetów
+    obliczMakespanOgolny(kopia, &priorytety, true, liczbaJobow, liczbaMaszyn);
+    return kopia;
+}
+
+// Główna funkcja algorytmu Tabu Search
 void TabuSearchSolver::solve(const std::vector<OperationSchedule>& operacje, int liczbaJobow, int liczbaMaszyn)
 {
     std::mt19937 gen(std::random_device{}());
+    int liczbaOperacji = operacje.size();
+    const int liczbaLosowychSasiadow = 400;
 
-    // Punkt startowy – bierzemy permutację operacji i losujemy priorytety
-    std::vector<OperationSchedule> aktualny = operacje;
-    int liczbaOperacji = aktualny.size();
-
+    // Inicjalizacja losowych priorytetów
     std::vector<int> priorytety(liczbaOperacji);
     for (int i = 0; i < liczbaOperacji; ++i)
-    {
         priorytety[i] = i;
-    }
-
     std::shuffle(priorytety.begin(), priorytety.end(), gen);
 
-    for (int i = 0; i < liczbaOperacji; ++i)
-    {
-        aktualny[i].priority = priorytety[i];
-        aktualny[i].start_time = 0;
-        aktualny[i].end_time = 0;
-    }
+    // Tworzymy harmonogram startowy
+    std::vector<OperationSchedule> aktualny = zbudujHarmonogramZPriorytetami(priorytety, operacje, liczbaJobow, liczbaMaszyn);
+    int najlepszyMakespan = obliczMakespanOgolny(aktualny, nullptr, false, liczbaJobow, liczbaMaszyn);
+    std::vector<OperationSchedule> najlepszy = aktualny;
 
-    // Sortujemy startowy harmonogram według priorytetu (będziemy to powtarzać później)
-    for (int i = 0; i < liczbaOperacji - 1; ++i)
-    {
-        for (int j = 0; j < liczbaOperacji - i - 1; ++j)
-        {
-            if (aktualny[j].priority > aktualny[j + 1].priority)
-            {
-                OperationSchedule temp = aktualny[j];
-                aktualny[j] = aktualny[j + 1];
-                aktualny[j + 1] = temp;
-            }
-        }
-    }
+    // Inicjalizacja listy tabu
+    std::vector<std::pair<int, int>> tabuLista;
+    int bezPoprawy = 0;
+    const int limitBezPoprawy = 300;
+    int liczbaRestartow = 0;
+    std::uniform_int_distribution<> dist(0, liczbaOperacji - 1);
 
-        // === KROK 4: Oblicz makespan startowego harmonogramu ===
-
-    int najlepszyMakespan = obliczMakespan(aktualny); // funkcja licząca makespan
-    std::vector<OperationSchedule> najlepszy = aktualny; // zapamiętujemy jako najlepszy dotąd
-
-    // === KROK 5: Przygotuj listę tabu ===
-    std::vector<std::pair<int, int> > tabuLista; // lista zakazanych ruchów (zamian)
-
-    // === KROK 6: Pętla główna Tabu Search ===
-
+    // Główna pętla iteracji
     for (int iter = 0; iter < liczbaIteracji; ++iter)
     {
+        std::cout << "\n[DEBUG] Iteracja " << iter
+                  << " | bez poprawy: " << bezPoprawy
+                  << " | obecny makespan: " << najlepszyMakespan << "\n";
+
+        std::vector<int> najlepszySasiadGenotyp;
         int najlepszySasiadKoszt = std::numeric_limits<int>::max();
-        std::vector<OperationSchedule> najlepszySasiad;
         int najlepszyI = -1;
         int najlepszyJ = -1;
 
-        for (int i = 0; i < aktualny.size() - 1; ++i)
-{
-    for (int j = i + 1; j < aktualny.size(); ++j)
-    {
-        // Zamieniaj tylko operacje na tej samej maszynie
-        if (aktualny[i].machine_id != aktualny[j].machine_id)
-            continue;
-
-        // Sprawdź czy ruch (i,j) nie jest tabu
-        std::pair<int, int> ruch = std::make_pair(i, j);
-        bool tabu = false;
-
-        for (int k = 0; k < tabuLista.size(); ++k)
+        // Szukamy najlepszego sąsiada (spośród losowych zamian)
+        for (int s = 0; s < liczbaLosowychSasiadow; ++s)
         {
-            if (tabuLista[k] == ruch)
+            int i = dist(gen);
+            int j = dist(gen);
+            if (i == j) continue;
+            if (i > j) std::swap(i, j);
+
+            std::pair<int, int> ruch = std::make_pair(i, j);
+            std::vector<int> sasiadGenotyp = priorytety;
+            std::swap(sasiadGenotyp[i], sasiadGenotyp[j]);
+
+            if (!czySwapLegalny(sasiadGenotyp, operacje, i, j))
+                continue;
+
+            std::vector<OperationSchedule> kopia = operacje;
+            int koszt = obliczMakespanOgolny(kopia, &sasiadGenotyp, true, liczbaJobow, liczbaMaszyn);
+
+            bool jestNaTabu = (std::find(tabuLista.begin(), tabuLista.end(), ruch) != tabuLista.end());
+
+            if (koszt < najlepszySasiadKoszt)
             {
-                tabu = true;
-                break;
+                najlepszySasiadGenotyp = sasiadGenotyp;
+                najlepszySasiadKoszt = koszt;
+                najlepszyI = i;
+                najlepszyJ = j;
             }
         }
-        if (tabu) continue;
 
-        // Tworzymy sąsiada
-        std::vector<OperationSchedule> sasiad = aktualny;
-int tmp = sasiad[i].priority;
-sasiad[i].priority = sasiad[j].priority;
-sasiad[j].priority = tmp;
-
-        // Oblicz koszt
-        int koszt = obliczMakespan(sasiad);
-
-        if (koszt < najlepszySasiadKoszt)
+        // Jeśli znaleziono sąsiada – sprawdzamy, czy warto go zaakceptować
+        if (!najlepszySasiadGenotyp.empty())
         {
-            najlepszySasiad = sasiad;
-            najlepszySasiadKoszt = koszt;
-            najlepszyI = i;
-            najlepszyJ = j;
-        }
-    }
-}
+            priorytety = najlepszySasiadGenotyp;
+            aktualny = zbudujHarmonogramZPriorytetami(priorytety, operacje, liczbaJobow, liczbaMaszyn);
 
-
-        // Jeśli znaleźliśmy sensownego sąsiada – użyj go
-        if (najlepszySasiad.size() > 0)
-        {
-            aktualny = najlepszySasiad;
-
-            // Aktualizujemy tabu listę
-            std::pair<int, int> wykonanyRuch = std::make_pair(najlepszyI, najlepszyJ);
-            tabuLista.push_back(wykonanyRuch);
+            // Dodaj ruch do listy tabu
+            tabuLista.push_back(std::make_pair(najlepszyI, najlepszyJ));
             if (tabuLista.size() > dlugoscTabu)
-            {
-                tabuLista.erase(tabuLista.begin()); // usuwamy najstarszy (FIFO)
-            }
+                tabuLista.erase(tabuLista.begin());
 
-            // Jeśli jest lepszy od najlepszego dotąd – zapamiętaj
             if (najlepszySasiadKoszt < najlepszyMakespan)
             {
-                najlepszy = najlepszySasiad;
+                std::cout << "[DEBUG] Poprawa! Nowy makespan: " << najlepszySasiadKoszt << "\n";
+                kosztyIteracji.push_back(najlepszySasiadKoszt);
+                najlepszy = aktualny;
                 najlepszyMakespan = najlepszySasiadKoszt;
+                bezPoprawy = 0;
+            }
+            else
+            {
+                //std::cout << "[DEBUG] Brak poprawy. Makespan pozostaje: " << najlepszyMakespan << "\n";
+                bezPoprawy++;
+            }
+
+            // Restart, jeśli za długo nie ma poprawy
+            if (bezPoprawy >= limitBezPoprawy)
+            {
+                liczbaRestartow++;
+
+                std::shuffle(priorytety.begin(), priorytety.end(), gen);
+                aktualny = zbudujHarmonogramZPriorytetami(priorytety, operacje, liczbaJobow, liczbaMaszyn);
+                bezPoprawy = 0;
+                tabuLista.clear();
             }
         }
         else
         {
-            std::cerr << "Brak dostępnych sąsiadów (lub wszystko na tabu).\n";
+            std::cerr << "[DEBUG] Brak dostępnych sąsiadów (lub wszystko na tabu).\n";
             break;
         }
     }
 
-    // === KROK 7: Zapisz wynik ===
     makespan = najlepszyMakespan;
     schedule = najlepszy;
+    if (kosztyIteracji.empty())
+        kosztyIteracji.push_back(najlepszyMakespan); // zabezpieczenie, jeśli żadna iteracja nie poprawiła
+
 }
 
-int TabuSearchSolver::obliczMakespan(std::vector<OperationSchedule>& harmonogram) const
+
+// Funkcja pomocnicza: oblicza makespan i tworzy harmonogram
+int TabuSearchSolver::obliczMakespanOgolny(std::vector<OperationSchedule>& kandydaci, const std::vector<int>* priorytety,
+    bool czySortowac, int liczbaJobow, int liczbaMaszyn) const
 {
-    std::map<int, int> dostepMaszyny; // dostępność maszyn
-    std::map<int, int> dostepJoba;    // dostępność jobów
-    std::map<std::pair<int, int>, bool> wykonane; // wykonane operacje (job, opID)
+    const int N = kandydaci.size();
 
-    int maxCzas = 0;
-
-    // KROK 1: Sortujemy operacje po priorytecie (ale nie wykonujemy ich jeszcze!)
-    for (int i = 0; i < harmonogram.size() - 1; ++i)
+    // Obliczamy, ile operacji ma każdy job
+    std::vector<int> liczbaOperacjiNaJob(liczbaJobow, 0);
+    for (int i = 0; i < N; ++i)
     {
-        for (int j = 0; j < harmonogram.size() - i - 1; ++j)
-        {
-            if (harmonogram[j].priority > harmonogram[j + 1].priority)
-            {
-                OperationSchedule temp = harmonogram[j];
-                harmonogram[j] = harmonogram[j + 1];
-                harmonogram[j + 1] = temp;
-            }
-        }
+        OperationSchedule op = kandydaci[i];
+        if (op.operation_id + 1 > liczbaOperacjiNaJob[op.job_id])
+            liczbaOperacjiNaJob[op.job_id] = op.operation_id + 1;
     }
 
-    // KROK 2: Pętla wykonująca operacje tylko wtedy, gdy mogą być wykonane
-    int wykonanych = 0;
-    while (wykonanych < harmonogram.size())
+    // Jeśli trzeba – przypisujemy nowe priorytety i sortujemy
+    if (czySortowac && priorytety)
     {
-        bool cosDodano = false;
+        for (int i = 0; i < N; ++i)
+            kandydaci[i].priority = (*priorytety)[i];
 
-        for (int i = 0; i < harmonogram.size(); ++i)
+        std::sort(kandydaci.begin(), kandydaci.end(), porownajPoPriorytecie);
+    }
+
+    // Inicjalizacja struktur pomocniczych
+    std::vector<int> maszyna_wolna_od(liczbaMaszyn, 0);
+    std::vector<int> job_gotowy_od(liczbaJobow, 0);
+    std::vector<std::vector<bool>> czy_zrobione(liczbaJobow);
+    for (int i = 0; i < liczbaJobow; ++i)
+        czy_zrobione[i].resize(liczbaOperacjiNaJob[i], false);
+
+    int liczba_zaplanowanych = 0;
+    int wynik = 0;
+
+    // Tworzymy harmonogram – aż wszystkie operacje będą zaplanowane
+    while (liczba_zaplanowanych < N)
+    {
+        bool dodano = false;
+
+        for (int i = 0; i < N; ++i)
         {
-            OperationSchedule& op = harmonogram[i];
-            std::pair<int, int> klucz = std::make_pair(op.job_id, op.operation_id);
+            OperationSchedule& op = kandydaci[i];
 
-            // Jeżeli już wykonana – pomijamy
-            if (wykonane[klucz]) continue;
+            if (czy_zrobione[op.job_id][op.operation_id]) continue;
 
-            // Sprawdzamy, czy poprzednia operacja joba została już wykonana
-            bool moznaWykonac = false;
-            if (op.operation_id == 0)
+            bool poprzedniaOK = (op.operation_id == 0) || czy_zrobione[op.job_id][op.operation_id - 1];
+
+            if (poprzedniaOK)
             {
-                moznaWykonac = true; // pierwszą operację można zawsze wykonać
-            }
-            else
-            {
-                std::pair<int, int> poprzednia = std::make_pair(op.job_id, op.operation_id - 1);
-                if (wykonane[poprzednia])
-                {
-                    moznaWykonac = true;
-                }
-            }
-
-            if (moznaWykonac)
-            {
-                int czasMaszyny = dostepMaszyny[op.machine_id];
-                int czasJoba = dostepJoba[op.job_id];
-
-                int start = (czasMaszyny > czasJoba) ? czasMaszyny : czasJoba;
+                int start = std::max(maszyna_wolna_od[op.machine_id], job_gotowy_od[op.job_id]);
                 int end = start + op.processing_time;
 
                 op.start_time = start;
                 op.end_time = end;
 
-                dostepMaszyny[op.machine_id] = end;
-                dostepJoba[op.job_id] = end;
-                wykonane[klucz] = true;
+                maszyna_wolna_od[op.machine_id] = end;
+                job_gotowy_od[op.job_id] = end;
+                czy_zrobione[op.job_id][op.operation_id] = true;
 
-                if (end > maxCzas)
-                {
-                    maxCzas = end;
-                }
+                if (end > wynik)
+                    wynik = end;
 
-                wykonanych++;
-                cosDodano = true;
+                liczba_zaplanowanych++;
+                dodano = true;
             }
         }
 
-        // Jeśli w tej pętli nie udało się nic zaplanować – coś poszło nie tak
-        if (!cosDodano)
+        if (!dodano)
         {
-            std::cerr << "Błąd: Deadlock przy obliczaniu makespan – nie można wykonać żadnej operacji.\n";
-            break;
+            std::cerr << "[BŁĄD] Deadlock – nie można wykonać żadnej operacji\n";
+            return std::numeric_limits<int>::max();
         }
     }
 
-    return maxCzas;
+    return wynik;
 }
 
-
+// Wypisuje najlepszy harmonogram do konsoli
 void TabuSearchSolver::printSchedule() const
 {
-    // Wypisujemy nagłówek
     std::cout << "\n=== Najlepszy harmonogram (TabuSearchSolver) ===\n";
     std::cout << "Makespan: " << makespan << "\n";
     std::cout << "Operacje:\n";
     std::cout << "Job\tOpID\tMaszyna\tPriory\tStart\tEnd\n";
 
-    // Iterujemy po wszystkich operacjach w harmonogramie
     for (int i = 0; i < schedule.size(); ++i)
     {
-        const OperationSchedule& op = schedule[i]; // jawne użycie typu
-
-        // Wypisujemy dane operacji w czytelnej formie tabeli
+        const OperationSchedule& op = schedule[i];
         std::cout << op.job_id << "\t"
                   << op.operation_id << "\t"
                   << op.machine_id << "\t"
@@ -252,12 +260,10 @@ void TabuSearchSolver::printSchedule() const
     }
 }
 
+// Zapisuje harmonogram do pliku CSV
 void TabuSearchSolver::zapiszDoCSV(const std::string& nazwaPliku) const
 {
-    // Otwieramy plik do zapisu
     std::ofstream out(nazwaPliku);
-
-    // Sprawdzamy, czy plik otworzył się poprawnie
     if (!out.is_open())
     {
         std::cerr << "Nie można otworzyć pliku do zapisu: " << nazwaPliku << "\n";
@@ -267,11 +273,9 @@ void TabuSearchSolver::zapiszDoCSV(const std::string& nazwaPliku) const
     // Nagłówek CSV
     out << "job_id,operation_id,machine_id,start_time,end_time,priority\n";
 
-    // Zapisujemy dane każdej operacji w formacie CSV
     for (int i = 0; i < schedule.size(); ++i)
     {
         const OperationSchedule& op = schedule[i];
-
         out << op.job_id << ","
             << op.operation_id << ","
             << op.machine_id << ","
@@ -279,6 +283,43 @@ void TabuSearchSolver::zapiszDoCSV(const std::string& nazwaPliku) const
             << op.end_time << ","
             << op.priority << "\n";
     }
+}
 
-    // Plik zostanie zamknięty automatycznie po wyjściu z funkcji (RAII)
+void TabuSearchSolver::zapiszStatystykiDoCSV(const std::string& nazwaPliku, int run) const
+{
+    if (kosztyIteracji.empty())
+    {
+        std::cerr << "Brak danych do zapisania statystyk.\n";
+        return;
+    }
+
+    double best = *std::min_element(kosztyIteracji.begin(), kosztyIteracji.end());
+    double worst = *std::max_element(kosztyIteracji.begin(), kosztyIteracji.end());
+    double avg = std::accumulate(kosztyIteracji.begin(), kosztyIteracji.end(), 0.0) / kosztyIteracji.size();
+
+    double sumKw = 0.0;
+    for (int koszt : kosztyIteracji)
+    {
+        double roznica = koszt - avg;
+        sumKw += roznica * roznica;
+    }
+    double stddev = std::sqrt(sumKw / kosztyIteracji.size());
+
+    std::ofstream out;
+    bool istnieje = std::ifstream(nazwaPliku).good();
+    out.open(nazwaPliku, std::ios::app);
+
+    if (!out.is_open())
+    {
+        std::cerr << "Nie można otworzyć pliku do zapisu: " << nazwaPliku << "\n";
+        return;
+    }
+
+    if (!istnieje)
+    {
+        out << "run;best;average;worst;std\n";
+    }
+
+    out << run << ";" << best << ";" << avg << ";" << worst << ";" << stddev << "\n";
+    out.close();
 }
