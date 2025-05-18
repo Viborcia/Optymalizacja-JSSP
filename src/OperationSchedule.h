@@ -12,4 +12,10 @@ struct OperationSchedule {
     int priority;
 };
 
+inline bool porownajPoPriorytecie(const OperationSchedule& a, const OperationSchedule& b)
+{
+    return a.priority < b.priority;
+}
+
+
 #endif // OPERATION_SCHEDULE_H

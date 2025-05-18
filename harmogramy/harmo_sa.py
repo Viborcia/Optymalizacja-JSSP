@@ -1,8 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-#df = pd.read_csv("harmonogram_random.csv")
-df = pd.read_csv("harmonogram_random.csv")
+df = pd.read_csv("../harmonogram_sa.csv")
 fig, ax = plt.subplots(figsize=(12, 6))
 
 # Nowa, poprawna wersja get_cmap (bez dodatkowego argumentu)

@@ -8,18 +8,21 @@
 
 class RandomSolver {
 public:
-    RandomSolver(int liczbaProb = 1000);
+    RandomSolver(int liczbaProb);
 
     void solve(const std::vector<OperationSchedule>& operacje, int liczbaJobow, int liczbaMaszyn);
     void printSchedule() const;
     void zapiszDoCSV(const std::string& nazwaPliku) const;
+    void zapiszStatystykiDoCSV(const std::string& nazwaPliku, int run) const;
+
+    int getMakespan() const { return makespan; }
+
 
 private:
     std::vector<OperationSchedule> schedule;
     int makespan;
     int liczbaProb;
     std::vector<double> kosztyProb;
-    
 };
 
-#endif // RANDOM_SOLVER_H
+#endif 
