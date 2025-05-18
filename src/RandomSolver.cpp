@@ -27,7 +27,7 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
     for (int prob = 0; prob < liczbaProb; ++prob)
     {
         // === KROK 1: Skopiuj operacje i nadaj im losowe, unikalne priorytety ===
-
+        //  std::cout << "\n=== Próba " << prob + 1 << " ===\n";
         std::vector<OperationSchedule> kandydaci = operacje;
 
         // Tworzymy wektor liczb 0,1,2,...,N-1
@@ -47,7 +47,12 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
             kandydaci[i].start_time = 0;
             kandydaci[i].end_time = 0;
         }
-
+        /* std::cout << "Przypisane priorytety:\n";
+    for (const auto& op : kandydaci)
+    {
+        std::cout << "Job " << op.job_id << ", Op " << op.operation_id 
+                  << ", Maszyna " << op.machine_id << ", Priorytet: " << op.priority << "\n";
+    }*/
         // === KROK 2: Sortujemy operacje po priorytecie rosnąco ===
 
         for (int i = 0; i < liczbaOperacji - 1; ++i)
@@ -62,6 +67,13 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
                 }
             }
         }
+
+       /*  std::cout << "Po sortowaniu według priorytetów:\n";
+    for (const auto& op : kandydaci)
+    {
+        std::cout << "Job " << op.job_id << ", Op " << op.operation_id 
+                  << ", Maszyna " << op.machine_id << ", Priorytet: " << op.priority << "\n";
+    }*/
 
         // === KROK 3: Tworzymy harmonogram, trzymając ograniczenia technologiczne ===
 
@@ -93,9 +105,7 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
                 // szukamy indeksu poprzedniej operacji w kandydaci
                 for (int j = 0; j < kandydaci.size(); ++j)
                 {
-                    if (kandydaci[j].job_id == op.job_id &&
-                    kandydaci[j].operation_id == op.operation_id - 1 &&
-                    czy_zrobione[j])
+                    if (kandydaci[j].job_id == op.job_id && kandydaci[j].operation_id == op.operation_id - 1 && czy_zrobione[j])
                     {
                         poprzedniaWykonana = true;
                         break;
@@ -118,7 +128,11 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
                 czy_zrobione[i] = true;
                 harmonogram.push_back(op);
                 dodano = true;
-            }
+
+              /*    std::cout << "Zaplanowane Job " << op.job_id << ", Op " << op.operation_id
+                          << " na maszynie " << op.machine_id
+                          << " od " << op.start_time << " do " << op.end_time << "\n";
+           */ }
         }
 
     if (!dodano)
@@ -139,11 +153,16 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
             }
         }
 
+           // std::cout << "Makespan tej próby: " << wynik << "\n";
+
+
         // === KROK 5: Jeśli ten harmonogram jest najlepszy dotąd – zapamiętaj go ===
         if (wynik < makespan)
         {
             makespan = wynik;
             schedule = harmonogram;
+                   // std::cout << "=> Nowy najlepszy harmonogram (makespan = " << makespan << ")\n";
+
         }
 
         // Zapisz wynik tej próby (dla statystyk)
@@ -203,4 +222,26 @@ void RandomSolver::zapiszDoCSV(const std::string& nazwaPliku) const
     }
 
     // Plik zostanie zamknięty automatycznie po zakończeniu funkcji (RAII)
+}
+void RandomSolver::zapiszMakespanDoCSV(const std::string& nazwaPliku) const
+{
+    // Tworzymy obiekt plikowy do zapisu
+    std::ofstream out(nazwaPliku);
+
+    // Sprawdzamy, czy plik otworzył się poprawnie
+    if (!out.is_open()) {
+        std::cerr << "Nie można otworzyć pliku do zapisu: " << nazwaPliku << "\n";
+        return;
+    }
+
+    // Nagłówek pliku CSV
+    out << "iteracja,makespan\n";
+
+    // Zapisujemy każdą wartość makespan z listy prób
+    for (size_t i = 0; i < kosztyProb.size(); ++i)
+    {
+        out << i + 1 << "," << kosztyProb[i] << "\n";
+    }
+
+    // Plik zostanie zamknięty automatycznie (RAII)
 }
