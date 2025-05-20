@@ -10,23 +10,26 @@ using namespace std;
 
 int main() 
 {
-    SimpleLoader loader;
-    //loader.load("C:\\Users\\micha\\Desktop\\opt2\\jssp2\\Optymalizacja-JSSP\\ta\\ta01.txt");
+   SimpleLoader loader;
+
+   //loader.load("C:\\Users\\MICHA~1\\Desktop\\opt2\\jssp2\\Optymalizacja-JSSP\\ta\\ta01.txt");
     loader.load("ta\\ta01.txt");
     //loader.wypisz(); 
+    
 
-/*
-   JSSPInstance loader;
-    loader.wczytajPlik("Known-Optima/short-js-600000-100-10000-1.data");
-    loader.wypiszOperacje();
+    
+   //JSSPInstance loader;
+   //loader.wczytajPlik("C:\\Users\\MICHA~1\\Desktop\\opt2\\jssp2\\Optymalizacja-JSSP\\Known-Optima\\short-js-600000-100-10000-1.data");
+   //loader.wczytajPlik("Known-Optima\\short-js-600000-100-10000-1.data");
+    //loader.wypiszOperacje();
    
-*/
+
     auto startwsio = std::chrono::high_resolution_clock::now();
     
-    int liczbaUruchomien = 10;
+    int liczbaUruchomien = 2;
 
-
-    // === RANDOM SOLVER – 10 uruchomień ===
+    /**/
+    // === RANDOM SOLVER===
     auto startRand = std::chrono::high_resolution_clock::now();
 
     int randIteracji = 1000;
@@ -53,10 +56,10 @@ int main()
     std::cout << "Koszt (makespan): " << najlepszyKoszt << "\n";
 
     auto stopRand = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsedRandom = stopRand - startRand;
-    std::cout << "[RandomSolver] Czas wykonania: " << elapsedRandom.count() << " sekund\n";
-
-    // === TABU SEARCH – 10 URUCHOMIEŃ ===
+   std::chrono::duration<double> elapsedRandom = stopRand - startRand;
+   std::cout << "[RandomSolver] Czas wykonania: " << elapsedRandom.count() << " sekund\n";
+    
+    // === TABU SEARCH ===
     auto startTS = std::chrono::high_resolution_clock::now();
 
     int tabuIteracje = 1000;
@@ -84,6 +87,10 @@ int main()
 
     // Zapisz tylko najlepszy harmonogram
     najlepszyTabu.zapiszDoCSV("harmonogram_tabu.csv");
+    najlepszyTabu.zapiszBestVsCurrentCSV("best_vs_current_tabu.csv");
+    najlepszyTabu.zapiszKosztyNajlepszegoRunCSV("koszty_tabu.csv");
+
+
 
     std::cout << "Najlepszy TABU run: #" << najlepszyRunTS << "\n";
     std::cout << "Koszt (makespan): " << najlepszyKosztTS << "\n";
@@ -92,14 +99,14 @@ int main()
     std::chrono::duration<double> elapsedTS = stopTS - startTS;
     std::cout << "[TabuSearch] Czas wykonania: " << elapsedTS.count() << " sekund\n";
 
+    
 
-
-    // === SIMULATED ANNEALING – 10 URUCHOMIEŃ ===
+    // === SIMULATED ANNEALING ===
 auto startSA = std::chrono::high_resolution_clock::now();
 
 double startTemp = 1000.0;
 double endTemp = 0.01;
-double coolingRate = 0.995;
+double coolingRate = 0.800;
 int maxIter = 10000;
 
 int najlepszyRunSA = -1;
@@ -123,6 +130,10 @@ for (int run = 0; run < liczbaUruchomien; ++run)
 
 // Zapisz tylko harmonogram najlepszego rozwiązania
 najlepszySA.zapiszDoCSV("harmonogram_sa.csv");
+najlepszySA.zapiszKosztyNajlepszegoRunCSV("koszty_sa.csv");
+najlepszySA.zapiszBestVsCurrentCSV("best_vs_current_sa.csv");
+
+
 
 std::cout << "Najlepszy SA run: #" << najlepszyRunSA << "\n";
 std::cout << "Koszt (makespan): " << najlepszyKosztSA << "\n";
@@ -131,6 +142,8 @@ auto stopSA = std::chrono::high_resolution_clock::now();
 std::chrono::duration<double> elapsedSA = stopSA - startSA;
 std::cout << "[SimulatedAnnealing] Czas wykonania: " << elapsedSA.count() << " sekund\n";
 
+
+
 /*
     EvolutionarySolver solverAE(100, 500, 0.8, 0.2); // populacja, pokolenia, prawd. krzyÅ¼., mutacji
     solverAE.solve(loader.operacje, loader.liczbaJobow, loader.liczbaMaszyn);
@@ -138,11 +151,11 @@ std::cout << "[SimulatedAnnealing] Czas wykonania: " << elapsedSA.count() << " s
     solverAE.zapiszDoCSV("harmonogram_evolution.csv");
 */
 
-
+   
 
 auto stopwsio = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsedwsio = stopwsio - startwsio;
-    std::cout << "[RandomSolver] Czas wykonania: " << elapsedwsio.count() << " sekund\n";
+    std::cout << "[Caly Algorytm] Czas wykonania: " << elapsedwsio.count() << " sekund\n";
 
 
 

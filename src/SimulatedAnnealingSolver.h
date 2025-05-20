@@ -21,8 +21,13 @@ public:
     void zapiszDoCSV(const std::string& nazwaPliku) const;
     void zapiszStatystykiDoCSV(const std::string& nazwaPliku, int run) const;
 
+    void zapiszKosztyNajlepszegoRunCSV(const std::string& nazwaPliku) const;
+    void zapiszBestVsCurrentCSV(const std::string& nazwaPliku) const;
+
     int getMakespan() const { return makespan; }
     const std::vector<OperationSchedule>& getSchedule() const { return schedule; }
+    
+
 
 
 
@@ -37,6 +42,13 @@ private:
     double wspolczynnikChlodzenia;
     int maksLiczbaIteracji;
     std::vector<int> kosztyIteracji; // historia kosztów
+    std::vector<double> avgIteracji;
+    std::vector<int> worstIteracji;
+
+    std::vector<int> historiaCurrent;     // koszt aktualnego rozwiązania w każdej iteracji
+std::vector<int> historiaBestSoFar;   // najlepszy koszt do tej pory
+
+
 
 
     // Pomocnicze do obliczeń

@@ -22,6 +22,9 @@ public:
 
     int getMakespan() const { return makespan; }
 const std::vector<OperationSchedule>& getSchedule() const { return schedule; }
+void zapiszBestVsCurrentCSV(const std::string& nazwaPliku) const;
+void zapiszKosztyNajlepszegoRunCSV(const std::string& nazwaPliku) const;
+
 
 
 
@@ -32,6 +35,12 @@ private:
     int liczbaIteracji;
     int dlugoscTabu;
     std::vector<int> kosztyIteracji;
+    std::vector<int> historiaCurrent;
+    std::vector<int> historiaBestSoFar;
+    std::vector<double> avgIteracji;
+std::vector<int> worstIteracji;
+
+
 
     std::vector<OperationSchedule> zbudujHarmonogramZPriorytetami(
         const std::vector<int>& priorytety,

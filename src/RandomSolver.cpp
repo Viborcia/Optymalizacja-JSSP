@@ -1,11 +1,12 @@
 #include "RandomSolver.h"
+#include "OperationSchedule.h"
 #include <iostream>
 #include <fstream>
 #include <random>
-#include <map>
 #include <algorithm>
 #include <numeric> // std::accumulate
 #include <fstream>
+
 
 RandomSolver::RandomSolver(int liczbaProb)
     : liczbaProb(liczbaProb), makespan(0)
@@ -28,6 +29,9 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
     // Wykonujemy wiele prób (losowych harmonogramów)
     for (int prob = 0; prob < liczbaProb; ++prob)
     {
+       // if (prob % 10 == 0)
+   // std::cout << "[DEBUG] Proba " << prob << "/" << liczbaProb << std::endl;
+
         // === KROK 1: Skopiuj operacje i nadaj im losowe, unikalne priorytety ===
         std::vector<OperationSchedule> kandydaci = operacje;
 
@@ -50,7 +54,14 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
         }
 
         // === KROK 2: Sortujemy operacje po priorytecie rosnąco ===
-        std::sort(kandydaci.begin(), kandydaci.end(), porownajPoPriorytecie);
+        std::vector<int> indeksy(liczbaOperacji);
+        for (int i = 0; i < liczbaOperacji; ++i)
+        {
+            indeksy[i] = i;
+        }
+
+        std::sort(indeksy.begin(), indeksy.end(), PorownywaczIndeksowPoPriorytecie(&kandydaci));
+
 
 
         // === KROK 3: Tworzymy harmonogram, trzymając ograniczenia technologiczne ===
@@ -65,9 +76,10 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
         {
             bool dodano = false;
 
-            for (int i = 0; i < kandydaci.size(); ++i)
+            for (int ii = 0; ii < indeksy.size(); ++ii)
             {
-                OperationSchedule& op = kandydaci[i]; //pojedyncza operacja
+                int i = indeksy[ii]; // ← Używamy wcześniej posortowanych indeksów!
+                OperationSchedule& op = kandydaci[i];
 
                 if (czy_zrobione[i]) continue; // już zaplanowana
 
