@@ -34,48 +34,48 @@ plik << "Pokolenie;Populacja;Fitness;Priorytety\n";
     }
 
     for (int epoka = 0; epoka < liczbaPokolen; ++epoka) {
-        std::cout << "\n--- Epoka " << epoka + 1 << " ---\n";
+       // std::cout << "\n--- Epoka " << epoka + 1 << " ---\n";
         std::vector<Individual> nowaPopulacja;
 
         while ((int)nowaPopulacja.size() < rozmiarPopulacji) {
             Individual r1 = turniej(populacja, tourSize, gen);
             Individual r2 = turniej(populacja, tourSize, gen);
-            std::cout << "Turniej: r1.fitness = " << r1.fitness << ", r2.fitness = " << r2.fitness << "\n";
+          //  std::cout << "Turniej: r1.fitness = " << r1.fitness << ", r2.fitness = " << r2.fitness << "\n";
 
             std::uniform_real_distribution<> disProb(0.0, 1.0);
             double probabilityCrossover = disProb(gen);
-            std::cout << "Prawd krzyżowania: "<<probabilityCrossover<<"\n";
+            //std::cout << "Prawd krzyżowania: "<<probabilityCrossover<<"\n";
             Individual child1 = r1;
             Individual child2 = r2;
 
             if (probabilityCrossover < prawdopodobienstwoKrzyzowania) {
                  std::pair<Individual, Individual> children = krzyzowanieOX(r1, r2, gen);
-                  std::cout << "Krzyżowanie wykonane:\n";
-                    std::cout << "  Rodzic 1: ";
+                //  std::cout << "Krzyżowanie wykonane:\n";
+                 //   std::cout << "  Rodzic 1: ";
                 for (int g : r1.priorytety) std::cout << g << " ";
-                std::cout << "\n  Rodzic 2: ";
+                //std::cout << "\n  Rodzic 2: ";
                 for (int g : r2.priorytety) std::cout << g << " ";
-                std::cout << "\n";
+               // std::cout << "\n";
                  child1 = children.first;
                 child2 = children.second;
                
-                std::cout << "  Dziecko 1: ";
+               // std::cout << "  Dziecko 1: ";
                 for (int g : child1.priorytety) std::cout << g << " ";
-                std::cout << "\n  Dziecko 2: ";
+              //  std::cout << "\n  Dziecko 2: ";
                 for (int g : child2.priorytety) std::cout << g << " ";
-                std::cout << "\n";
+               // std::cout << "\n";
             }
             double probabilityMutation = disProb(gen);
-            std::cout << "Prawd mutacji: "<<probabilityMutation<<"\n";
+           // std::cout << "Prawd mutacji: "<<probabilityMutation<<"\n";
             if (probabilityMutation < prawdopodobienstwoMutacji) mutacjaSwap(child1);
             if (probabilityMutation < prawdopodobienstwoMutacji) mutacjaSwap(child2);
-             for (int g : child1.priorytety) std::cout << g << " ";
-                std::cout << "\n  Dziecko 2: ";
-            for (int g : child2.priorytety) std::cout << g << " ";
-                std::cout << "\n";
+           //  for (int g : child1.priorytety) std::cout << g << " ";
+            //    std::cout << "\n  Dziecko 2: ";
+          //  for (int g : child2.priorytety) std::cout << g << " ";
+          //      std::cout << "\n";
             child1.fitness = ocenOsobnik(child1, operacje);
             child2.fitness = ocenOsobnik(child2, operacje);
-                        std::cout << "Fitness dzieci: child1 = " << child1.fitness << ", child2 = " << child2.fitness << "\n";
+                 //       std::cout << "Fitness dzieci: child1 = " << child1.fitness << ", child2 = " << child2.fitness << "\n";
 
 
             nowaPopulacja.push_back(child1); 
@@ -99,7 +99,7 @@ plik << "Pokolenie;Populacja;Fitness;Priorytety\n";
             if (individual.fitness < najlepszyMakespan) {
                 najlepszyMakespan = individual.fitness;
                 najlepszyHarmonogram = budujHarmonogram(individual, operacje);
-                std::cout << "Pokolenie " << epoka + 1 << ": nowy najlepszy makespan = " << najlepszyMakespan << "\n";
+            //    std::cout << "Pokolenie " << epoka + 1 << ": nowy najlepszy makespan = " << najlepszyMakespan << "\n";
             }
         }
     }
@@ -108,7 +108,10 @@ plik << "Pokolenie;Populacja;Fitness;Priorytety\n";
 EvolutionSolver::Individual EvolutionSolver::stworzLosowyOsobnik(int liczbaOperacji) {
     Individual individual;
     individual.priorytety.resize(liczbaOperacji);
-    std::iota(individual.priorytety.begin(), individual.priorytety.end(), 0);
+    //std::iota(individual.priorytety.begin(), individual.priorytety.end(), 0);
+    for (int i = 0; i < (int)individual.priorytety.size(); ++i) {
+    individual.priorytety[i] = i;
+}
     std::mt19937 gen(std::random_device{}());
     std::shuffle(individual.priorytety.begin(), individual.priorytety.end(), gen);
     return individual;
@@ -164,13 +167,13 @@ EvolutionSolver::krzyzowanieOX(const Individual& p1, const Individual& p2, std::
     int start = dist(gen), end = dist(gen);
     if (start > end) std::swap(start, end);
 
-    std::cout << "Rozmiar: " << n << "\n";
-    std::cout << "Zakres krzyżowania: start=" << start << ", end=" << end << "\n";
-    std::cout << "Rodzic 1: ";
-    for (int x : p1.priorytety) std::cout << x << " ";
-    std::cout << "\nRodzic 2: ";
-    for (int x : p2.priorytety) std::cout << x << " ";
-    std::cout << "\n";
+   // std::cout << "Rozmiar: " << n << "\n";
+   // std::cout << "Zakres krzyżowania: start=" << start << ", end=" << end << "\n";
+   // std::cout << "Rodzic 1: ";
+   // for (int x : p1.priorytety) std::cout << x << " ";
+   // std::cout << "\nRodzic 2: ";
+   // for (int x : p2.priorytety) std::cout << x << " ";
+   // std::cout << "\n";
 
     // Dziecko 1: segment od p1, reszta z p2
     Individual child1;
@@ -178,23 +181,23 @@ EvolutionSolver::krzyzowanieOX(const Individual& p1, const Individual& p2, std::
     for (int i = start; i <= end; ++i)
         child1.priorytety[i] = p1.priorytety[i];
     
-    std::cout << "Child1 po skopiowaniu segmentu: ";
-    for (int x : child1.priorytety) std::cout << x << " ";
-    std::cout << "\n";
+  //  std::cout << "Child1 po skopiowaniu segmentu: ";
+   // for (int x : child1.priorytety) std::cout << x << " ";
+   // std::cout << "\n";
 
     int index1 = (end + 1) % n;
     for (int i = 0; i < n; ++i) {
         int val = p2.priorytety[(end + 1 + i) % n];
         if (std::find(child1.priorytety.begin(), child1.priorytety.end(), val) == child1.priorytety.end()) {
             child1.priorytety[index1] = val;
-            std::cout << "Dodano " << val << " do child1 na pozycję " << index1 << "\n";
+           // std::cout << "Dodano " << val << " do child1 na pozycję " << index1 << "\n";
             index1 = (index1 + 1) % n;
         }
     }
 
-    std::cout << "Child1 końcowy: ";
-    for (int x : child1.priorytety) std::cout << x << " ";
-    std::cout << "\n";
+    //std::cout << "Child1 końcowy: ";
+   // for (int x : child1.priorytety) std::cout << x << " ";
+   // std::cout << "\n";
 
     // Dziecko 2: segment od p2, reszta z p1
     Individual child2;
@@ -202,23 +205,23 @@ EvolutionSolver::krzyzowanieOX(const Individual& p1, const Individual& p2, std::
     for (int i = start; i <= end; ++i)
         child2.priorytety[i] = p2.priorytety[i];
 
-    std::cout << "Child2 po skopiowaniu segmentu: ";
-    for (int x : child2.priorytety) std::cout << x << " ";
-    std::cout << "\n";   
+   // std::cout << "Child2 po skopiowaniu segmentu: ";
+   // for (int x : child2.priorytety) std::cout << x << " ";
+   // std::cout << "\n";   
         
     int index2 = (end + 1) % n;
     for (int i = 0; i < n; ++i) {
         int val = p1.priorytety[(end + 1 + i) % n];
         if (std::find(child2.priorytety.begin(), child2.priorytety.end(), val) == child2.priorytety.end()) {
             child2.priorytety[index2] = val;
-            std::cout << "Dodano " << val << " do child2 na pozycję " << index2 << "\n";
+      //      std::cout << "Dodano " << val << " do child2 na pozycję " << index2 << "\n";
             index2 = (index2 + 1) % n;
         }
     }
 
-    std::cout << "Child2 końcowy: ";
-    for (int x : child2.priorytety) std::cout << x << " ";
-    std::cout << "\n";
+   // std::cout << "Child2 końcowy: ";
+   // for (int x : child2.priorytety) std::cout << x << " ";
+   // std::cout << "\n";
 
     return std::make_pair(child1, child2);
 }
