@@ -155,8 +155,28 @@ void SimulatedAnnealingSolver::solve(const std::vector<OperationSchedule>& opera
 
         // === Krok 8: Chłodzenie ===
         kosztyIteracji.push_back(aktualnyKoszt);
+
+// Oblicz AVG i WORST z dotychczasowych iteracji
+int suma = 0;
+int najgorszy = aktualnyKoszt;
+for (int k = 0; k < kosztyIteracji.size(); ++k) 
+{
+    suma += kosztyIteracji[k];
+    if (kosztyIteracji[k] > najgorszy)
+        najgorszy = kosztyIteracji[k];
+}
+double avg = static_cast<double>(suma) / kosztyIteracji.size();
+
+avgIteracji.push_back(avg);
+worstIteracji.push_back(najgorszy);
+
         T *= wspolczynnikChlodzenia;
         iteracja++;
+
+        // Zapisz current i best_so_far do wykresu
+historiaCurrent.push_back(aktualnyKoszt);
+historiaBestSoFar.push_back(najlepszyKoszt);
+
     }
 
     // Zapisz najlepsze rozwiązanie
@@ -329,5 +349,64 @@ void SimulatedAnnealingSolver::zapiszStatystykiDoCSV(const std::string& nazwaPli
     }
 
     out << run << ";" << best << ";" << avg << ";" << worst << ";" << stddev << "\n";
+    out.close();
+}
+
+
+void SimulatedAnnealingSolver::zapiszKosztyNajlepszegoRunCSV(const std::string& nazwaPliku) const
+{
+    if (kosztyIteracji.empty() || avgIteracji.empty() || worstIteracji.empty()) {
+        std::cerr << "[SA] Brak danych do zapisania kosztów najlepszego runa.\n";
+        return;
+    }
+
+    std::ofstream out;
+    bool istnieje = std::ifstream(nazwaPliku).good();
+    out.open(nazwaPliku, std::ios::app);
+
+    if (!out.is_open()) {
+        std::cerr << "[SA] Nie można otworzyć pliku: " << nazwaPliku << "\n";
+        return;
+    }
+
+    if (!istnieje) {
+        out << "iter;best;avg;worst\n";
+    }
+
+    for (int i = 0; i < kosztyIteracji.size(); ++i) {
+        out << i << ";" 
+            << kosztyIteracji[i] << ";" 
+            << avgIteracji[i] << ";" 
+            << worstIteracji[i] << "\n";
+    }
+
+    out.close();
+}
+
+
+void SimulatedAnnealingSolver::zapiszBestVsCurrentCSV(const std::string& nazwaPliku) const
+{
+    if (historiaCurrent.empty() || historiaBestSoFar.empty()) {
+        std::cerr << "[SA] Brak danych do zapisania best vs current.\n";
+        return;
+    }
+
+    std::ofstream out;
+    bool istnieje = std::ifstream(nazwaPliku).good();
+    out.open(nazwaPliku, std::ios::app);
+
+    if (!out.is_open()) {
+        std::cerr << "[SA] Nie można otworzyć pliku: " << nazwaPliku << "\n";
+        return;
+    }
+
+    if (!istnieje) {
+        out << "iter;current;best_so_far\n";
+    }
+
+    for (int i = 0; i < historiaCurrent.size(); ++i) {
+        out << i << ";" << historiaCurrent[i] << ";" << historiaBestSoFar[i] << "\n";
+    }
+
     out.close();
 }
