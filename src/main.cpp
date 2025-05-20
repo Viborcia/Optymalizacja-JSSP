@@ -5,6 +5,7 @@
 #include "SimulatedAnnealingSolver.h"
 #include "EvolutionarySolver.h"
 #include <chrono>
+#include "EvolutionSolver.h"
 #include <iostream>
 using namespace std;
 
@@ -134,7 +135,6 @@ najlepszySA.zapiszKosztyNajlepszegoRunCSV("koszty_sa.csv");
 najlepszySA.zapiszBestVsCurrentCSV("best_vs_current_sa.csv");
 
 
-
 std::cout << "Najlepszy SA run: #" << najlepszyRunSA << "\n";
 std::cout << "Koszt (makespan): " << najlepszyKosztSA << "\n";
 
@@ -142,8 +142,7 @@ auto stopSA = std::chrono::high_resolution_clock::now();
 std::chrono::duration<double> elapsedSA = stopSA - startSA;
 std::cout << "[SimulatedAnnealing] Czas wykonania: " << elapsedSA.count() << " sekund\n";
 
-
-
+  //===EVOLUTIONERY ALGORYTHIM===
 /*
     EvolutionarySolver solverAE(100, 500, 0.8, 0.2); // populacja, pokolenia, prawd. krzyÅ¼., mutacji
     solverAE.solve(loader.operacje, loader.liczbaJobow, loader.liczbaMaszyn);
@@ -151,13 +150,15 @@ std::cout << "[SimulatedAnnealing] Czas wykonania: " << elapsedSA.count() << " s
     solverAE.zapiszDoCSV("harmonogram_evolution.csv");
 */
 
+   EvolutionSolver solverAE(10, 20, 0.01, 0.7, 3); // populacja, pokolenia, mutacja, krzyżowanie, turniej
+    solverAE.solve(loader.operacje, loader.liczbaJobow, loader.liczbaMaszyn);
+    solverAE.printSchedule();
+   // solverAE.zapiszDoCSV("harmonogram_evolution.csv");
    
 
 auto stopwsio = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsedwsio = stopwsio - startwsio;
     std::cout << "[Caly Algorytm] Czas wykonania: " << elapsedwsio.count() << " sekund\n";
-
-
-
+  
     return 0;
 }

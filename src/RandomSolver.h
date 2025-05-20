@@ -18,6 +18,8 @@ public:
     int getMakespan() const { return makespan; }
 
 
+    void zapiszMakespanDoCSV(const std::string &nazwaPliku) const;
+
 private:
     std::vector<OperationSchedule> schedule;
     int makespan;

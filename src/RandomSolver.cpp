@@ -29,8 +29,6 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
     // Wykonujemy wiele prób (losowych harmonogramów)
     for (int prob = 0; prob < liczbaProb; ++prob)
     {
-       // if (prob % 10 == 0)
-   // std::cout << "[DEBUG] Proba " << prob << "/" << liczbaProb << std::endl;
 
         // === KROK 1: Skopiuj operacje i nadaj im losowe, unikalne priorytety ===
         std::vector<OperationSchedule> kandydaci = operacje;
@@ -52,17 +50,21 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
             kandydaci[i].start_time = 0;
             kandydaci[i].end_time = 0;
         }
-
+        /* std::cout << "Przypisane priorytety:\n";
+    for (const auto& op : kandydaci)
+    {
+        std::cout << "Job " << op.job_id << ", Op " << op.operation_id 
+                  << ", Maszyna " << op.machine_id << ", Priorytet: " << op.priority << "\n";
+    }*/
         // === KROK 2: Sortujemy operacje po priorytecie rosnąco ===
         std::vector<int> indeksy(liczbaOperacji);
         for (int i = 0; i < liczbaOperacji; ++i)
         {
             indeksy[i] = i;
         }
-
+        
+        //Sortowanie kubełkowe
         std::sort(indeksy.begin(), indeksy.end(), PorownywaczIndeksowPoPriorytecie(&kandydaci));
-
-
 
         // === KROK 3: Tworzymy harmonogram, trzymając ograniczenia technologiczne ===
         std::vector<OperationSchedule> harmonogram;
@@ -91,15 +93,16 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
                 }
                 else
                 {
-                    // szukamy indeksu poprzedniej operacji w kandydaci, czyli poprzedniej operacji w job 
-                    for (int j = 0; j < kandydaci.size(); ++j)
+
+                // szukamy indeksu poprzedniej operacji w kandydaci
+                for (int j = 0; j < kandydaci.size(); ++j)
+                {
+                    if (kandydaci[j].job_id == op.job_id && kandydaci[j].operation_id == op.operation_id - 1 && czy_zrobione[j])
                     {
-                        if (kandydaci[j].job_id == op.job_id && kandydaci[j].operation_id == op.operation_id - 1 && czy_zrobione[j])
-                        {
                             poprzedniaWykonana = true;
                             break;
-                        }
                     }
+                }
                 }
 
                 if (poprzedniaWykonana)
@@ -114,11 +117,19 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
                     maszyna_wolna_od[op.machine_id] = op.end_time; //ta maszyna będzie znów wolna dopiero po tej operacji
                     job_gotowy_od[op.job_id] = op.end_time; // job będzie gotowy do kolejnej operacji też dopiero wtedy
 
+
                     czy_zrobione[i] = true;
                     harmonogram.push_back(op);
                     dodano = true;
                 }
             }
+
+
+              /*    std::cout << "Zaplanowane Job " << op.job_id << ", Op " << op.operation_id
+                          << " na maszynie " << op.machine_id
+                          << " od " << op.start_time << " do " << op.end_time << "\n";
+           */ }
+
 
             if (!dodano)
             {
@@ -137,11 +148,16 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
             }
         }
 
+           // std::cout << "Makespan tej próby: " << wynik << "\n";
+
+
         // === KROK 5: Jeśli ten harmonogram jest najlepszy dotąd – zapamiętaj go ===
         if (wynik < makespan)
         {
             makespan = wynik;
             schedule = harmonogram;
+                   // std::cout << "=> Nowy najlepszy harmonogram (makespan = " << makespan << ")\n";
+
         }
 
         // Zapisz wynik tej próby (dla statystyk)
@@ -219,10 +235,12 @@ void RandomSolver::zapiszStatystykiDoCSV(const std::string& nazwaPliku, int run)
     bool istnieje = std::ifstream(nazwaPliku).good();
     out.open(nazwaPliku, std::ios::app); // dopisujemy
 
+
     if (!out.is_open()) {
         std::cerr << "Nie można otworzyć pliku do zapisu: " << nazwaPliku << "\n";
         return;
     }
+
 
     if (!istnieje) {
         out << "run;best;average;worst\n"; // nagłówek tylko jeśli plik nie istniał
@@ -231,3 +249,4 @@ void RandomSolver::zapiszStatystykiDoCSV(const std::string& nazwaPliku, int run)
     out << run << ";" << best << ";" << avg << ";" << worst << "\n";
     out.close();
 }
+
