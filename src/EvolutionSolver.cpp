@@ -18,15 +18,19 @@ EvolutionSolver::EvolutionSolver(int populacja, int pokolenia, double prawdopodo
       liczbaMaszyn(0) {}
 
 void EvolutionSolver::solve(const std::vector<OperationSchedule>& operacje, int lj, int lm) {
-     std::mt19937 gen(std::random_device{}());
+    std::mt19937 gen(std::random_device{}());
     std::ofstream plik("ewolucyjny.csv");
-plik << "Pokolenie;Populacja;Fitness;Priorytety\n";
+    plik << "Pokolenie;Populacja;Fitness;Priorytety\n";
+
     liczbaJobow = lj;
     liczbaMaszyn = lm;
     int liczbaOperacji = operacje.size();
 
-    // === Inicjalizacja populacji ===
     populacja.clear();
+    kosztyIteracji.clear();
+    avgIteracji.clear();
+    worstIteracji.clear();
+
     for (int i = 0; i < rozmiarPopulacji; ++i) {
         Individual individual = stworzLosowyOsobnik(liczbaOperacji);
         individual.fitness = ocenOsobnik(individual, operacje);
@@ -34,75 +38,99 @@ plik << "Pokolenie;Populacja;Fitness;Priorytety\n";
     }
 
     for (int epoka = 0; epoka < liczbaPokolen; ++epoka) {
-       // std::cout << "\n--- Epoka " << epoka + 1 << " ---\n";
+        std::cout << "\n=== Epoka " << epoka + 1 << " ===\n";
+
         std::vector<Individual> nowaPopulacja;
 
         while ((int)nowaPopulacja.size() < rozmiarPopulacji) {
             Individual r1 = turniej(populacja, tourSize, gen);
             Individual r2 = turniej(populacja, tourSize, gen);
-          //  std::cout << "Turniej: r1.fitness = " << r1.fitness << ", r2.fitness = " << r2.fitness << "\n";
 
             std::uniform_real_distribution<> disProb(0.0, 1.0);
             double probabilityCrossover = disProb(gen);
-            //std::cout << "Prawd krzyżowania: "<<probabilityCrossover<<"\n";
             Individual child1 = r1;
             Individual child2 = r2;
 
             if (probabilityCrossover < prawdopodobienstwoKrzyzowania) {
-                 std::pair<Individual, Individual> children = krzyzowanieOX(r1, r2, gen);
-                //  std::cout << "Krzyżowanie wykonane:\n";
-                 //   std::cout << "  Rodzic 1: ";
-                for (int g : r1.priorytety) std::cout << g << " ";
-                //std::cout << "\n  Rodzic 2: ";
-                for (int g : r2.priorytety) std::cout << g << " ";
-               // std::cout << "\n";
-                 child1 = children.first;
+                std::cout<<"Krzyżujemy "<<"\n";
+                std::pair<Individual, Individual> children = krzyzowanieOX(r1, r2, gen);
+                child1 = children.first;
                 child2 = children.second;
-               
-               // std::cout << "  Dziecko 1: ";
-                for (int g : child1.priorytety) std::cout << g << " ";
-              //  std::cout << "\n  Dziecko 2: ";
-                for (int g : child2.priorytety) std::cout << g << " ";
-               // std::cout << "\n";
             }
+
             double probabilityMutation = disProb(gen);
-           // std::cout << "Prawd mutacji: "<<probabilityMutation<<"\n";
-            if (probabilityMutation < prawdopodobienstwoMutacji) mutacjaSwap(child1);
-            if (probabilityMutation < prawdopodobienstwoMutacji) mutacjaSwap(child2);
-           //  for (int g : child1.priorytety) std::cout << g << " ";
-            //    std::cout << "\n  Dziecko 2: ";
-          //  for (int g : child2.priorytety) std::cout << g << " ";
-          //      std::cout << "\n";
+            if (probabilityMutation < prawdopodobienstwoMutacji){
+                std::cout << "MUTUJEMY 1 ";
+                for (int p : child1.priorytety) {
+                    std::cout << p << " ";
+                }
+                std::cout << "\n";
+                mutacjaSwap(child1);
+            } 
+            if (probabilityMutation < prawdopodobienstwoMutacji){
+                std::cout << "MUTUJEMY 2 ";
+                for (int p : child2.priorytety) {
+                    std::cout << p << " ";
+                }
+                std::cout << "\n";
+                mutacjaSwap(child2); 
+            } 
+
             child1.fitness = ocenOsobnik(child1, operacje);
             child2.fitness = ocenOsobnik(child2, operacje);
-                 //       std::cout << "Fitness dzieci: child1 = " << child1.fitness << ", child2 = " << child2.fitness << "\n";
 
-
-            nowaPopulacja.push_back(child1); 
+            nowaPopulacja.push_back(child1);
             nowaPopulacja.push_back(child2);
-}
-
-
-        // Dopisz dane do pliku CSV
-    for (size_t i = 0; i < nowaPopulacja.size(); ++i) {
-        plik << epoka + 1 << ";" << i << ";" << nowaPopulacja[i].fitness << ";";
-        for (size_t j = 0; j < nowaPopulacja[i].priorytety.size(); ++j) {
-            plik << nowaPopulacja[i].priorytety[j];
-            if (j < nowaPopulacja[i].priorytety.size() - 1) plik << "-";
         }
-        plik << "\n";
-    }
+
+        // Zapis i wyświetlenie populacji
+        for (size_t i = 0; i < nowaPopulacja.size(); ++i) {
+            const Individual& ind = nowaPopulacja[i];
+
+            // CSV
+            plik << epoka + 1 << ";" << i << ";" << ind.fitness << ";";
+            for (size_t j = 0; j < ind.priorytety.size(); ++j) {
+                plik << ind.priorytety[j];
+                if (j < ind.priorytety.size() - 1) plik << "-";
+            }
+            plik << "\n";
+
+            // Konsola
+            std::cout << "Osobnik " << i << ": Fitness = " << ind.fitness << ", Priorytety = ";
+            for (int p : ind.priorytety) std::cout << p << " ";
+            std::cout << "\n";
+        }
 
         populacja = nowaPopulacja;
+
+        int best = std::numeric_limits<int>::max();
+        int worst = 0;
+        int sum = 0;
 
         for (const auto& individual : populacja) {
             if (individual.fitness < najlepszyMakespan) {
                 najlepszyMakespan = individual.fitness;
                 najlepszyHarmonogram = budujHarmonogram(individual, operacje);
-            //    std::cout << "Pokolenie " << epoka + 1 << ": nowy najlepszy makespan = " << najlepszyMakespan << "\n";
+                std::cout << "Nowy najlepszy makespan: " << najlepszyMakespan
+                          << " (epoka " << epoka + 1 << ")\n";
             }
+            best = std::min(best, individual.fitness);
+            worst = std::max(worst, individual.fitness);
+            sum += individual.fitness;
         }
+
+        int avg = sum / populacja.size();
+
+        kosztyIteracji.push_back(best);
+        avgIteracji.push_back(avg);
+        worstIteracji.push_back(worst);
+
+        std::cout << "Statystyki epoki " << epoka + 1 << " — Best: " << best 
+                  << ", Avg: " << avg << ", Worst: " << worst << "\n";
     }
+
+    std::cout << "\n=== Zakończono działanie algorytmu ===\n";
+    std::cout << "Najlepszy znaleziony makespan: " << najlepszyMakespan << "\n";
 }
 
 EvolutionSolver::Individual EvolutionSolver::stworzLosowyOsobnik(int liczbaOperacji) {
@@ -288,4 +316,107 @@ void EvolutionSolver::printSchedule() const {
                   << op.start_time << "\t"
                   << op.end_time << "\n";
     }
+}
+
+void EvolutionSolver::zapiszDoCSV(const std::string& nazwaPliku) const
+{
+    // Tworzymy obiekt plikowy do zapisu
+    std::ofstream out(nazwaPliku);
+
+    // Sprawdzamy, czy plik otworzył się poprawnie
+    if (!out.is_open()) {
+        std::cerr << "Nie można otworzyć pliku do zapisu: " << nazwaPliku << "\n";
+        return; // kończymy funkcję, jeśli nie udało się otworzyć pliku
+    }
+
+    // Nagłówek pliku CSV
+    const std::string naglowek = "job_id,operation_id,machine_id,start_time,end_time\n";
+    out << naglowek;
+    std::cout << naglowek;  // <-- wypisanie nagłówka na konsolę
+
+    // Iterujemy po wszystkich operacjach i zapisujemy ich dane do pliku oraz na konsolę
+    for (const auto& op : najlepszyHarmonogram)
+    {
+        std::string linia =
+            std::to_string(op.job_id) + "," +
+            std::to_string(op.operation_id) + "," +
+            std::to_string(op.machine_id) + "," +
+            std::to_string(op.start_time) + "," +
+            std::to_string(op.end_time) + "\n";
+
+        out << linia;
+        std::cout << linia;  // <-- wypisanie na konsolę
+    }
+
+    // Plik zostanie zamknięty automatycznie po zakończeniu funkcji (RAII)
+}
+
+void EvolutionSolver::zapiszStatystykiDoCSV(const std::string& nazwaPliku, int run) const
+{
+    if (kosztyIteracji.empty())
+    {
+        std::cerr << "Brak danych do zapisania statystyk (kosztyIteracji).\n";
+        return;
+    }
+
+    double best = *std::min_element(kosztyIteracji.begin(), kosztyIteracji.end());
+    double worst = *std::max_element(kosztyIteracji.begin(), kosztyIteracji.end());
+    double avg = std::accumulate(kosztyIteracji.begin(), kosztyIteracji.end(), 0.0) / kosztyIteracji.size();
+
+    double sumKw = 0.0;
+    for (int koszt : kosztyIteracji)
+    {
+        double roznica = koszt - avg;
+        sumKw += roznica * roznica;
+    }
+    double stddev = std::sqrt(sumKw / kosztyIteracji.size());
+
+    std::ofstream out;
+    bool istnieje = std::ifstream(nazwaPliku).good();
+    out.open(nazwaPliku, std::ios::app);
+
+    if (!out.is_open())
+    {
+        std::cerr << "Nie można otworzyć pliku do zapisu: " << nazwaPliku << "\n";
+        return;
+    }
+
+    if (!istnieje)
+    {
+        out << "run;best;average;worst;std\n";
+    }
+
+    out << run << ";" << best << ";" << avg << ";" << worst << ";" << stddev << "\n";
+    out.close();
+}
+
+
+void EvolutionSolver::zapiszKosztyNajlepszegoRunCSV(const std::string& nazwaPliku) const
+{
+    if (kosztyIteracji.empty() || avgIteracji.empty() || worstIteracji.empty()) {
+        std::cerr << "[EA] Brak danych do zapisania kosztów najlepszego runa.\n";
+        return;
+    }
+
+    std::ofstream out;
+    bool istnieje = std::ifstream(nazwaPliku).good();
+    out.open(nazwaPliku, std::ios::app);
+
+    if (!out.is_open()) {
+        std::cerr << "[EA] Nie można otworzyć pliku: " << nazwaPliku << "\n";
+        return;
+    }
+
+    if (!istnieje) {
+        out << "iter;best;avg;worst\n";
+    }
+
+    for (int i = 0; i < kosztyIteracji.size(); ++i) {
+        out << i << ";" 
+            << kosztyIteracji[i] << ";" 
+            << avgIteracji[i] << ";" 
+            << worstIteracji[i] << "\n";
+    }
+
+    out.close();
 }

@@ -29,7 +29,7 @@ int main()
     
     int liczbaUruchomien = 2;
 
-    /**/
+    /**/ 
     // === RANDOM SOLVER===
     auto startRand = std::chrono::high_resolution_clock::now();
 
@@ -150,10 +150,22 @@ std::cout << "[SimulatedAnnealing] Czas wykonania: " << elapsedSA.count() << " s
     solverAE.zapiszDoCSV("harmonogram_evolution.csv");
 */
 
-   EvolutionSolver solverAE(10, 20, 0.01, 0.7, 3); // populacja, pokolenia, mutacja, krzyżowanie, turniej
+auto startEA = std::chrono::high_resolution_clock::now();
+int populacja = 100;
+int pokolenia = 100; 
+double prawdopodobMutacji = 0.1;
+double prawdopodobKrzyzowania = 0.3;
+int tourSize = 5;
+   EvolutionSolver solverAE(populacja, pokolenia, prawdopodobMutacji,prawdopodobKrzyzowania, tourSize); 
     solverAE.solve(loader.operacje, loader.liczbaJobow, loader.liczbaMaszyn);
     solverAE.printSchedule();
-   // solverAE.zapiszDoCSV("harmonogram_evolution.csv");
+    solverAE.zapiszStatystykiDoCSV("harmonogram_ea.csv", 1);
+    solverAE.zapiszKosztyNajlepszegoRunCSV("koszty_ea.csv");
+   solverAE.zapiszDoCSV("harmonogram_evolution.csv");
+   
+auto stopEA = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> EA = stopEA - startEA;
+    std::cout << "[Algorytm EA] Czas wykonania: " << EA.count() << " sekund\n";
    
 
 auto stopwsio = std::chrono::high_resolution_clock::now();

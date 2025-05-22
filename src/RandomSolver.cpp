@@ -128,7 +128,7 @@ void RandomSolver::solve(const std::vector<OperationSchedule>& operacje, int lic
               /*    std::cout << "Zaplanowane Job " << op.job_id << ", Op " << op.operation_id
                           << " na maszynie " << op.machine_id
                           << " od " << op.start_time << " do " << op.end_time << "\n";
-           */ }
+           }*/ 
 
 
             if (!dodano)
